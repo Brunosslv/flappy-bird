@@ -1,0 +1,35 @@
+// Dados de cada "mundo". Velocidade em pixels por segundo.
+// fundo: imagem do cenário; chaoInicio: onde o chão começa na imagem
+// (fração da altura); chao: tile do chão que rola; cano: cores dos canos.
+var TEMAS = [
+   { nome: 'Dia', velocidade: 192,
+     fundo: 'imagens/cenarios/flappy-background.jpg', chaoInicio: 0.865, chao: 'imagens/chaos/chao-0.png',
+     cano: { borda: '#0f2e17', principal: '#3fbf5e', luz: '#7fe89b', sombra: '#1f8f3f' } },
+   { nome: 'Noite', velocidade: 204,
+     fundo: 'imagens/cenarios/mundo-1-noite.jpg', chaoInicio: 0.865, chao: 'imagens/chaos/chao-1.png',
+     cano: { borda: '#1e1b4b', principal: '#6366f1', luz: '#a5b4fc', sombra: '#4338ca' } },
+   { nome: 'Pôr do sol', velocidade: 216,
+     fundo: 'imagens/cenarios/mundo-2-por-do-sol.jpg', chaoInicio: 0.940, chao: 'imagens/chaos/chao-2.png',
+     cano: { borda: '#431407', principal: '#f97316', luz: '#fdba74', sombra: '#c2410c' } },
+   { nome: 'Vulcão', velocidade: 228,
+     fundo: 'imagens/cenarios/mundo-3-vulcao.jpg', chaoInicio: 0.865, chao: 'imagens/chaos/chao-3.png',
+     cano: { borda: '#450a0a', principal: '#dc2626', luz: '#f87171', sombra: '#991b1b' } },
+   { nome: 'Gelo', velocidade: 240,
+     fundo: 'imagens/cenarios/mundo-4-gelo.jpg', chaoInicio: 0.840, chao: 'imagens/chaos/chao-4.png',
+     cano: { borda: '#0c4a6e', principal: '#7dd3fc', luz: '#e0f2fe', sombra: '#38bdf8' } },
+   { nome: 'Selva', velocidade: 252,
+     fundo: 'imagens/cenarios/mundo-5-selva.jpg', chaoInicio: 0.900, chao: 'imagens/chaos/chao-5.png',
+     cano: { borda: '#052e16', principal: '#15803d', luz: '#4ade80', sombra: '#166534' } },
+   { nome: 'Deserto', velocidade: 264,
+     fundo: 'imagens/cenarios/mundo-6-deserto.jpg', chaoInicio: 0.855, chao: 'imagens/chaos/chao-6.png',
+     cano: { borda: '#422006', principal: '#eab308', luz: '#fde047', sombra: '#a16207' } },
+   { nome: 'Submarino', velocidade: 276,
+     fundo: 'imagens/cenarios/mundo-7-submarino.jpg', chaoInicio: 0.840, chao: 'imagens/chaos/chao-7.png',
+     cano: { borda: '#083344', principal: '#06b6d4', luz: '#67e8f9', sombra: '#0e7490' } },
+   { nome: 'Espaço', velocidade: 288,
+     fundo: 'imagens/cenarios/mundo-8-espaco.jpg', chaoInicio: 0.915, chao: 'imagens/chaos/chao-8.png',
+     cano: { borda: '#2e1065', principal: '#9333ea', luz: '#c084fc', sombra: '#6b21a8' } },
+   { nome: 'Sakura', velocidade: 300,
+     fundo: 'imagens/cenarios/mundo-9-sakura.jpg', chaoInicio: 0.925, chao: 'imagens/chaos/chao-9.png',
+     cano: { borda: '#500724', principal: '#ec4899', luz: '#f9a8d4', sombra: '#be185d' } }
+];

@@ -1,0 +1,369 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Flappy Bird HTML5 Canvas</title>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Inter:wght@400;600;800&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="css/flappy.css" />
+    <script src="js/animacao.js"></script>
+    <script src="js/teclado.js"></script>
+    <script src="js/colisor.js"></script>
+    <script src="js/temas.js"></script>
+    <script src="js/mundo.js"></script>
+    <script src="js/cenario.js"></script>
+    <script src="js/chao.js"></script>
+    <script src="js/cano.js"></script>
+    <script src="js/passaro.js"></script>
+    <script src="js/painel.js"></script>
+    <script src="js/sons.js"></script>
+  </head>
+  <body>
+    <div class="area-jogo">
+      <canvas id="canvas" class="tela-jogo"></canvas>
+
+      <div
+        id="startScreen"
+        class="sobreposicao tela-inicial transicao-opacidade oculto sem-clique"
+      >
+        <div class="conteudo-inicial">
+          <h1 class="fonte-pixel titulo-jogo">
+            FLAPPY<br /><span class="destaque-titulo">BIRD</span>
+          </h1>
+          <p class="subtitulo">Toque, clique ou aperte espaço para voar!</p>
+        </div>
+
+        <div class="acoes-iniciais">
+          <button id="startButton" class="fonte-pixel botao-iniciar">
+            JOGAR
+          </button>
+          <div class="caixa-recorde">
+            <span class="rotulo-recorde">Recorde</span>
+            <span id="startHighScore" class="fonte-pixel valor-recorde">0</span>
+          </div>
+        </div>
+      </div>
+
+      <div id="hud" class="painel-pontuacao sobreposicao oculto">
+        <div class="fonte-pixel pontuacao" id="currentScore">0</div>
+      </div>
+
+      <div
+        id="gameOverScreen"
+        class="sobreposicao tela-fim-jogo oculto sem-clique transicao-opacidade"
+      >
+        <div
+          id="gameOverCard"
+          class="painel-fim-jogo escala-fechada transicao-transform"
+        >
+          <h2 class="fonte-pixel titulo-fim-jogo">FIM DE JOGO</h2>
+
+          <div class="grade-estatisticas">
+            <div class="caixa-estatistica">
+              <span class="rotulo-estatistica">Pontos</span>
+              <span id="finalScore" class="fonte-pixel valor-estatistica"
+                >0</span
+              >
+            </div>
+            <div class="caixa-estatistica">
+              <span class="rotulo-estatistica">Melhor</span>
+              <span
+                id="finalHighScore"
+                class="fonte-pixel valor-estatistica destaque"
+                >0</span
+              >
+            </div>
+          </div>
+
+          <button id="restartButton" class="fonte-pixel botao-reiniciar">
+            JOGAR DE NOVO
+          </button>
+        </div>
+      </div>
+    </div>
+
+
+    <script>
+      // Canvas e Context
+      var canvas = document.getElementById('canvas');
+      var context = canvas.getContext('2d');
+
+      // Variáveis principais
+      var animacao, teclado, colisor, mundo, cenario, chao, passaro;
+      var painel, sons, criadorCanos;
+      var totalImagens = 0, carregadas = 0;
+      var estado = 'carregando';   // carregando, inicio, jogando, fim
+      var recorde = Number(localStorage.getItem('flappy_high_score')) || 0;
+      var pontosPorMundo = 10;     // a cada quantos pontos muda de mundo
+
+      // Elementos HTML (telas)
+      var telaInicial = document.getElementById('startScreen');
+      var hud = document.getElementById('hud');
+      var telaFim = document.getElementById('gameOverScreen');
+      var cartaoFim = document.getElementById('gameOverCard');
+
+      // Começa ajustando o tamanho e carregando as imagens
+      ajustarTela();
+      carregarImagens();
+
+      function ajustarTela() {
+         var pai = canvas.parentElement;
+         canvas.width = pai.clientWidth;
+         canvas.height = pai.clientHeight;
+      }
+
+      function carregarImagens() {
+         // Cada mundo tem uma imagem de fundo e uma de chão
+         for (var i in TEMAS) {
+            var fundo = new Image();
+            fundo.onload = carregando;
+            fundo.onerror = carregando;
+            fundo.src = TEMAS[i].fundo;
+            TEMAS[i].imgFundo = fundo;
+
+            var chaoImg = new Image();
+            chaoImg.onload = carregando;
+            chaoImg.onerror = carregando;
+            chaoImg.src = TEMAS[i].chao;
+            TEMAS[i].imgChao = chaoImg;
+
+            totalImagens += 2;
+         }
+      }
+
+      function carregando() {
+         context.save();
+
+         // Fundo
+         var gradiente = context.createLinearGradient(0, 0, 0, canvas.height);
+         gradiente.addColorStop(0, '#38bdf8');
+         gradiente.addColorStop(1, '#bae6fd');
+         context.fillStyle = gradiente;
+         context.fillRect(0, 0, canvas.width, canvas.height);
+
+         // Texto "Carregando"
+         context.fillStyle = 'white';
+         context.strokeStyle = 'black';
+         context.textAlign = 'center';
+         context.font = '28px sans-serif';
+         context.fillText('Carregando...', canvas.width / 2, 200);
+         context.strokeText('Carregando...', canvas.width / 2, 200);
+
+         // Barra de loading
+         carregadas++;
+         var tamanhoTotal = canvas.width * 0.6;
+         var tamanho = carregadas / totalImagens * tamanhoTotal;
+         context.fillStyle = 'yellow';
+         context.fillRect((canvas.width - tamanhoTotal) / 2, 230, 
+                          tamanho, 30);
+
+         context.restore();
+
+         if (carregadas == totalImagens) {
+            iniciarObjetos();
+            mostrarTelaInicial();
+         }
+      }
+
+      function iniciarObjetos() {
+         // Objetos principais
+         animacao = new Animacao(context);
+         teclado = new Teclado(document);
+         colisor = new Colisor();
+         sons = new Sons();
+         mundo = new Mundo();
+         cenario = new Cenario(context, mundo);
+         chao = new Chao(context, mundo);
+         passaro = new Passaro(context);
+         painel = new Painel(document.getElementById('currentScore'));
+
+         // Ligações entre objetos
+         animacao.novoSprite(cenario);
+         animacao.novoSprite(chao);
+         animacao.novoSprite(passaro);
+         animacao.novoSprite(painel);
+
+         colisor.novoSprite(passaro);
+         colisor.novoSprite(chao);
+         animacao.novoProcessamento(mundo);
+         animacao.novoProcessamento(colisor);
+
+         configuracoesIniciais();
+      }
+
+      function configuracoesIniciais() {
+         // Pássaro
+         passaro.posicionar();
+
+         // Canos
+         criacaoCanos();
+
+         // Game Over
+         passaro.morreu = function() {
+            gameOver();
+         }
+
+         // Teclado: espaço e seta para cima fazem a ação principal
+         teclado.disparou(ESPACO, acaoPrincipal);
+         teclado.disparou(SETA_ACIMA, acaoPrincipal);
+
+         // Evita que o espaço/seta rolem a página ou cliquem em botões
+         document.addEventListener('keydown', function(evento) {
+            if (evento.keyCode == ESPACO || evento.keyCode == SETA_ACIMA)
+               evento.preventDefault();
+         });
+
+         // Mouse e toque no canvas
+         canvas.addEventListener('click', function(evento) {
+            if (estado == 'jogando') passaro.pular();
+         });
+         canvas.addEventListener('touchstart', function(evento) {
+            if (estado == 'jogando') {
+               evento.preventDefault();
+               passaro.pular();
+            }
+         }, { passive: false });
+
+         // Botões
+         document.getElementById('startButton').addEventListener('click',
+            function() { this.blur(); iniciarJogo(); });
+         document.getElementById('restartButton').addEventListener('click',
+            function() { this.blur(); reiniciarJogo(); });
+
+         window.addEventListener('resize', ajustarTela);
+      }
+
+      function criacaoCanos() {
+         criadorCanos = {
+            intervalo: 1667,   // ms entre um cano e outro
+            ultimoCano: new Date().getTime(),
+
+            processar: function() {
+               if (estado != 'jogando') return;
+
+               var agora = new Date().getTime();
+               var decorrido = agora - this.ultimoCano;
+
+               if (decorrido > this.intervalo) {
+                  novoCano();
+                  this.ultimoCano = agora;
+               }
+            }
+         };
+
+         animacao.novoProcessamento(criadorCanos);
+      }
+
+      function novoCano() {
+         var cano = new Cano(context, mundo, passaro);
+
+         // Altura do cano de cima: entre 60 e o limite que deixa
+         // a abertura inteira acima do chão (com folga de 80)
+         var minimo = 60;
+         var maximo = canvas.height - alturaDoChao(context) - 
+                      cano.abertura - 80;
+         cano.topo = Math.floor(Math.random() * (maximo - minimo + 1)) + 
+                     minimo;
+         cano.x = canvas.width;
+         cano.aoPassar = pontuar;
+
+         // Entra antes do chão: o chão é desenhado por cima dos canos
+         animacao.novoSprite(cano, chao);
+         colisor.novoSprite(cano);
+      }
+
+      function acaoPrincipal() {
+         if (estado == 'jogando') passaro.pular();
+         else if (estado == 'inicio') iniciarJogo();
+         else if (estado == 'fim') reiniciarJogo();
+      }
+
+      function pontuar() {
+         painel.pontuacao++;
+         sons.tocarPonto();
+
+         // A cada 'pontosPorMundo' pontos, muda de mundo
+         mundo.trocar(Math.floor(painel.pontuacao / pontosPorMundo));
+      }
+
+      function mostrarTelaInicial() {
+         document.getElementById('startHighScore').textContent = recorde;
+         estado = 'inicio';
+         animacao.ligar();
+         telaInicial.classList.remove('oculto', 'sem-clique');
+      }
+
+      function resetarJogo() {
+         removerCanos();
+         passaro.posicionar();
+         painel.zerar();
+         mundo.trocar(0, true);
+      }
+
+      function comecarPartida() {
+         estado = 'jogando';
+         passaro.voando = true;
+         chao.rolando = true;
+         criadorCanos.ultimoCano = new Date().getTime();
+         hud.classList.remove('oculto');
+      }
+
+      function iniciarJogo() {
+         if (estado != 'inicio') return;
+         sons.iniciar();
+         resetarJogo();
+         telaInicial.classList.add('oculto', 'sem-clique');
+         comecarPartida();
+      }
+
+      function gameOver() {
+         estado = 'fim';
+         animacao.desligar();
+         sons.tocarBatida();
+
+         if (painel.pontuacao > recorde) {
+            recorde = painel.pontuacao;
+            localStorage.setItem('flappy_high_score', recorde);
+         }
+
+         document.getElementById('finalScore').textContent = painel.pontuacao;
+         document.getElementById('finalHighScore').textContent = recorde;
+         document.getElementById('startHighScore').textContent = recorde;
+
+         hud.classList.add('oculto');
+         telaFim.classList.remove('oculto', 'sem-clique');
+         cartaoFim.classList.remove('escala-fechada');
+         cartaoFim.classList.add('escala-aberta');
+      }
+
+      function reiniciarJogo() {
+         if (estado != 'fim') return;
+
+         telaFim.classList.add('oculto', 'sem-clique');
+         cartaoFim.classList.remove('escala-aberta');
+         cartaoFim.classList.add('escala-fechada');
+
+         resetarJogo();
+         comecarPartida();
+         animacao.ligar();
+      }
+
+      function removerCanos() {
+         for (var i in animacao.sprites) {
+            if (animacao.sprites[i] instanceof Cano) {
+               animacao.excluirSprite(animacao.sprites[i]);
+               colisor.excluirSprite(animacao.sprites[i]);
+            }
+         }
+
+         // Aplica as exclusões já, para os canos antigos não
+         // colidirem com o pássaro no primeiro quadro
+         animacao.processarExclusoes();
+         colisor.processarExclusoes();
+      }
+    </script>
+  </body>
+</html>
