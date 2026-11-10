@@ -31,7 +31,7 @@ Cano.prototype = {
       var canvas = ctx.canvas;
       var cores = this.mundo.coresCano;
       var alturaCap = 22;
-      var yChao = canvas.height - alturaDoChao(ctx);
+      var yChao = alturaTela(canvas) - alturaDoChao(ctx);
       var yBaixo = this.topo + this.abertura;
       
       var segmento = function(x, y, largura, altura) {
@@ -62,7 +62,7 @@ Cano.prototype = {
    },
    retangulosColisao: function() {
       var canvas = this.context.canvas;
-      var yChao = canvas.height - alturaDoChao(this.context);
+      var yChao = alturaTela(canvas) - alturaDoChao(this.context);
       var yBaixo = this.topo + this.abertura;
       
       return [

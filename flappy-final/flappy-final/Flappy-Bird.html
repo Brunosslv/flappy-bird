@@ -9,6 +9,7 @@
       rel="stylesheet"
     />
     <link rel="stylesheet" href="css/flappy.css" />
+    <script src="js/tela.js"></script>
     <script src="js/animacao.js"></script>
     <script src="js/teclado.js"></script>
     <script src="js/colisor.js"></script>
@@ -19,6 +20,8 @@
     <script src="js/cano.js"></script>
     <script src="js/passaro.js"></script>
     <script src="js/painel.js"></script>
+    <script src="js/aviso.js"></script>
+    <script src="js/contagem.js"></script>
     <script src="js/sons.js"></script>
   </head>
   <body>
@@ -93,9 +96,10 @@
 
       // Variáveis principais
       var animacao, teclado, colisor, mundo, cenario, chao, passaro;
-      var painel, sons, criadorCanos;
+      var painel, sons, aviso, contagem, criadorCanos;
+      var pausadoEm = 0;
       var totalImagens = 0, carregadas = 0;
-      var estado = 'carregando';   // carregando, inicio, jogando, fim
+      var estado = 'carregando';   // carregando, inicio, contagem, jogando, pausado, fim
       var recorde = Number(localStorage.getItem('flappy_high_score')) || 0;
       var pontosPorMundo = 10;     // a cada quantos pontos muda de mundo
 
@@ -111,8 +115,10 @@
 
       function ajustarTela() {
          var pai = canvas.parentElement;
-         canvas.width = pai.clientWidth;
-         canvas.height = pai.clientHeight;
+         var densidade = window.devicePixelRatio || 1;
+         canvas.width = pai.clientWidth * densidade;
+         canvas.height = pai.clientHeight * densidade;
+         context.setTransform(densidade, 0, 0, densidade, 0, 0);
       }
 
       function carregarImagens() {
@@ -138,26 +144,26 @@
          context.save();
 
          // Fundo
-         var gradiente = context.createLinearGradient(0, 0, 0, canvas.height);
+         var gradiente = context.createLinearGradient(0, 0, 0, alturaTela(canvas));
          gradiente.addColorStop(0, '#38bdf8');
          gradiente.addColorStop(1, '#bae6fd');
          context.fillStyle = gradiente;
-         context.fillRect(0, 0, canvas.width, canvas.height);
+         context.fillRect(0, 0, larguraTela(canvas), alturaTela(canvas));
 
          // Texto "Carregando"
          context.fillStyle = 'white';
          context.strokeStyle = 'black';
          context.textAlign = 'center';
          context.font = '28px sans-serif';
-         context.fillText('Carregando...', canvas.width / 2, 200);
-         context.strokeText('Carregando...', canvas.width / 2, 200);
+         context.fillText('Carregando...', larguraTela(canvas) / 2, 200);
+         context.strokeText('Carregando...', larguraTela(canvas) / 2, 200);
 
          // Barra de loading
          carregadas++;
-         var tamanhoTotal = canvas.width * 0.6;
+         var tamanhoTotal = larguraTela(canvas) * 0.6;
          var tamanho = carregadas / totalImagens * tamanhoTotal;
          context.fillStyle = 'yellow';
-         context.fillRect((canvas.width - tamanhoTotal) / 2, 230, 
+         context.fillRect((larguraTela(canvas) - tamanhoTotal) / 2, 230, 
                           tamanho, 30);
 
          context.restore();
@@ -179,11 +185,15 @@
          chao = new Chao(context, mundo);
          passaro = new Passaro(context);
          painel = new Painel(document.getElementById('currentScore'));
+         aviso = new Aviso(context);
+         contagem = new Contagem(context);
 
          // Ligações entre objetos
          animacao.novoSprite(cenario);
          animacao.novoSprite(chao);
          animacao.novoSprite(passaro);
+         animacao.novoSprite(aviso);
+         animacao.novoSprite(contagem);
          animacao.novoSprite(painel);
 
          colisor.novoSprite(passaro);
@@ -201,14 +211,19 @@
          // Canos
          criacaoCanos();
 
+         // Quando a contagem termina, a partida começa
+         contagem.aoTerminar = comecarPartida;
+
          // Game Over
          passaro.morreu = function() {
             gameOver();
          }
 
-         // Teclado: espaço e seta para cima fazem a ação principal
+         // Teclado: espaço e seta para cima fazem a ação principal;
+         // Enter pausa
          teclado.disparou(ESPACO, acaoPrincipal);
          teclado.disparou(SETA_ACIMA, acaoPrincipal);
+         teclado.disparou(ENTER, pausarJogo);
 
          // Evita que o espaço/seta rolem a página ou cliquem em botões
          document.addEventListener('keydown', function(evento) {
@@ -219,13 +234,24 @@
          // Mouse e toque no canvas
          canvas.addEventListener('click', function(evento) {
             if (estado == 'jogando') passaro.pular();
+            else if (estado == 'pausado') pausarJogo();
          });
          canvas.addEventListener('touchstart', function(evento) {
             if (estado == 'jogando') {
                evento.preventDefault();
                passaro.pular();
             }
+            else if (estado == 'pausado') {
+               evento.preventDefault();
+               pausarJogo();
+            }
          }, { passive: false });
+
+         // Pausa sozinho se o jogador sair da aba ou da janela
+         document.addEventListener('visibilitychange', function() {
+            if (document.hidden) pausarAutomaticamente();
+         });
+         window.addEventListener('blur', pausarAutomaticamente);
 
          // Botões
          document.getElementById('startButton').addEventListener('click',
@@ -263,11 +289,11 @@
          // Altura do cano de cima: entre 60 e o limite que deixa
          // a abertura inteira acima do chão (com folga de 80)
          var minimo = 60;
-         var maximo = canvas.height - alturaDoChao(context) - 
+         var maximo = alturaTela(canvas) - alturaDoChao(context) - 
                       cano.abertura - 80;
          cano.topo = Math.floor(Math.random() * (maximo - minimo + 1)) + 
                      minimo;
-         cano.x = canvas.width;
+         cano.x = larguraTela(canvas);
          cano.aoPassar = pontuar;
 
          // Entra antes do chão: o chão é desenhado por cima dos canos
@@ -281,12 +307,51 @@
          else if (estado == 'fim') reiniciarJogo();
       }
 
+      function pausarJogo() {
+         if (estado == 'jogando') {
+            estado = 'pausado';
+            pausadoEm = new Date().getTime();
+            animacao.desligar();
+            desenharPausa();
+         }
+         else if (estado == 'pausado') {
+            // O tempo parado não conta para criar o próximo cano
+            criadorCanos.ultimoCano += new Date().getTime() - pausadoEm;
+            estado = 'jogando';
+            animacao.ligar();
+         }
+      }
+
+      function pausarAutomaticamente() {
+         if (estado == 'jogando') pausarJogo();
+      }
+
+      function desenharPausa() {
+         context.save();
+         context.fillStyle = 'rgba(0, 0, 0, 0.45)';
+         context.fillRect(0, 0, larguraTela(canvas), alturaTela(canvas));
+         context.fillStyle = 'white';
+         context.textAlign = 'center';
+         context.font = '28px "Press Start 2P", monospace';
+         context.fillText('PAUSADO', larguraTela(canvas) / 2, 
+                          alturaTela(canvas) / 2);
+         context.font = '11px "Press Start 2P", monospace';
+         context.fillText('ENTER OU TOQUE PARA CONTINUAR', 
+                          larguraTela(canvas) / 2, alturaTela(canvas) / 2 + 40);
+         context.restore();
+      }
+
       function pontuar() {
          painel.pontuacao++;
          sons.tocarPonto();
 
          // A cada 'pontosPorMundo' pontos, muda de mundo
-         mundo.trocar(Math.floor(painel.pontuacao / pontosPorMundo));
+         var novoMundo = Math.floor(painel.pontuacao / pontosPorMundo) % 
+                         TEMAS.length;
+         if (novoMundo != mundo.indice) {
+            mundo.trocar(novoMundo);
+            aviso.mostrar(TEMAS[novoMundo].nome + '!');
+         }
       }
 
       function mostrarTelaInicial() {
@@ -300,7 +365,16 @@
          removerCanos();
          passaro.posicionar();
          painel.zerar();
+         aviso.limpar();
          mundo.trocar(0, true);
+      }
+
+      function iniciarContagem() {
+         estado = 'contagem';
+         passaro.voando = false;   // fica balançando enquanto conta
+         chao.rolando = false;
+         hud.classList.remove('oculto');
+         contagem.iniciar();
       }
 
       function comecarPartida() {
@@ -309,6 +383,9 @@
          chao.rolando = true;
          criadorCanos.ultimoCano = new Date().getTime();
          hud.classList.remove('oculto');
+
+         // Primeiro pulo automático: dá tempo de se preparar
+         passaro.pular();
       }
 
       function iniciarJogo() {
@@ -316,7 +393,7 @@
          sons.iniciar();
          resetarJogo();
          telaInicial.classList.add('oculto', 'sem-clique');
-         comecarPartida();
+         iniciarContagem();
       }
 
       function gameOver() {
@@ -347,7 +424,7 @@
          cartaoFim.classList.add('escala-fechada');
 
          resetarJogo();
-         comecarPartida();
+         iniciarContagem();
          animacao.ligar();
       }
 

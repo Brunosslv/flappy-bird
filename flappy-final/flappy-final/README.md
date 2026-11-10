@@ -17,6 +17,7 @@ Abra o arquivo `Flappy-Bird.html` no navegador.
 |---|---|
 | Começar / pular / jogar de novo | `Espaço` ou `Seta para cima` |
 | Pular | Clique ou toque na tela |
+| Pausar / continuar | `Enter` (ou toque na tela, quando pausado). O jogo também pausa ao sair da aba |
 
 O recorde fica salvo no navegador (`localStorage`).
 
@@ -35,6 +36,9 @@ js/
   cenario.js          desenha o fundo do mundo atual
   mundo.js            troca de mundo, velocidade e cores dos canos
   painel.js           pontuação no HUD
+  aviso.js            nome do mundo na tela quando a fase muda
+  contagem.js         contagem regressiva (3, 2, 1) antes de começar
+  tela.js             tamanho da tela (funciona em telas de alta densidade)
   sons.js             efeitos sonoros gerados pelo navegador
   temas.js            dados dos 10 mundos
 imagens/

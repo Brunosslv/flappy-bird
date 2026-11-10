@@ -161,9 +161,10 @@ body {
 .painel-pontuacao {
   top: 0;
   right: 0;
+  bottom: auto;
   left: 0;
   display: flex;
-  justify-content: space-between;
+  justify-content: center;
   align-items: center;
   padding: 1.5rem;
   pointer-events: none;

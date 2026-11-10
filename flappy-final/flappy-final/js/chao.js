@@ -1,6 +1,6 @@
 // O chão ocupa 14% da altura da tela
 function alturaDoChao(context) {
-   return Math.round(context.canvas.height * 0.14);
+   return Math.round(alturaTela(context.canvas) * 0.14);
 }
 
 function Chao(context, mundo) {
@@ -37,7 +37,7 @@ Chao.prototype = {
       var canvas = ctx.canvas;
       var img = TEMAS[indice].imgChao;
       var altura = alturaDoChao(ctx);
-      var y = canvas.height - altura;
+      var y = alturaTela(canvas) - altura;
       
       ctx.save();
       ctx.imageSmoothingEnabled = true;
@@ -45,13 +45,13 @@ Chao.prototype = {
       
       if (! (img.complete && img.naturalWidth)) {
          ctx.fillStyle = '#6b4423';
-         ctx.fillRect(0, y, canvas.width, altura);
+         ctx.fillRect(0, y, larguraTela(canvas), altura);
       }
       else {
          var largura = img.naturalWidth * altura / img.naturalHeight;
          var inicio = -(this.deslocamento % largura);
          
-         for (var x = inicio; x < canvas.width; x += largura) {
+         for (var x = inicio; x < larguraTela(canvas); x += largura) {
             // +1px de sobreposição evita fresta entre as repetições
             ctx.drawImage(img, Math.floor(x), y, 
                           Math.ceil(largura) + 1, altura);
@@ -64,8 +64,8 @@ Chao.prototype = {
       var canvas = this.context.canvas;
       var altura = alturaDoChao(this.context);
       
-      return [ {x: 0, y: canvas.height - altura, 
-                largura: canvas.width, altura: altura} ];
+      return [ {x: 0, y: alturaTela(canvas) - altura, 
+                largura: larguraTela(canvas), altura: altura} ];
    },
    colidiuCom: function(outro) {
       

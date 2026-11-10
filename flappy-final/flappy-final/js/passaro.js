@@ -1,6 +1,7 @@
 function Passaro(context) {
    this.context = context;
    this.raio = 18;
+   this.margemColisao = 4;   // o pássaro é redondo: tira as quinas do quadrado
    this.x = 0;
    this.y = 0;
    this.velocidade = 0;      // velocidade vertical (px/s; positivo = descendo)
@@ -10,6 +11,8 @@ function Passaro(context) {
    this.voando = false;      // false = balançando na tela inicial
    this.morto = false;
    this.morreu = null;       // função chamada quando o pássaro morre
+   this.duracaoAsa = 350;    // quanto tempo a asa bate depois de um pulo (ms)
+   this.tempoAsa = 0;
 }
 Passaro.prototype = {
    atualizar: function() {
@@ -17,9 +20,12 @@ Passaro.prototype = {
       
       // Na tela inicial o pássaro só balança
       if (! this.voando) {
-         this.y = canvas.height / 2 + Math.sin(Date.now() / 200) * 10;
+         this.y = alturaTela(canvas) / 2 + Math.sin(Date.now() / 200) * 10;
          return;
       }
+      
+      if (this.tempoAsa > 0)
+         this.tempoAsa = Math.max(0, this.tempoAsa - this.animacao.decorrido);
       
       var decorrido = this.animacao.decorrido / 1000;
       this.velocidade += this.gravidade * decorrido;
@@ -59,14 +65,18 @@ Passaro.prototype = {
       ctx.arc(4, 4, this.raio * 0.6, 0, Math.PI);
       ctx.fill();
 
-      // Asa
+      // Asa: gira em torno do "ombro" para bater
+      ctx.save();
+      ctx.translate(-1, 2);
+      ctx.rotate(this.anguloAsa());
       ctx.fillStyle = '#fde047';
       ctx.beginPath();
-      ctx.ellipse(-4, 2, 8, 5, Math.PI / 6, 0, Math.PI * 2);
+      ctx.ellipse(-3, 0, 8, 5, Math.PI / 6, 0, Math.PI * 2);
       ctx.fill();
       ctx.strokeStyle = '#ca8a04';
       ctx.lineWidth = 1.5;
       ctx.stroke();
+      ctx.restore();
 
       // Olho
       ctx.fillStyle = '#ffffff';
@@ -96,22 +106,40 @@ Passaro.prototype = {
       
       ctx.restore();
    },
+   // Ângulo da asa (positivo = para cima)
+   anguloAsa: function() {
+      // Na tela inicial a asa tremula devagar
+      if (! this.voando)
+         return Math.sin(Date.now() / 90) * 0.5;
+      
+      // Depois de um pulo bate duas vezes, cada vez mais fraco
+      if (this.tempoAsa > 0) {
+         var progresso = 1 - this.tempoAsa / this.duracaoAsa;
+         return Math.sin(progresso * Math.PI * 4) * 0.9 * (1 - progresso * 0.5);
+      }
+      
+      return 0;
+   },
    pular: function() {
       if (! this.voando || this.morto) return;
+      this.tempoAsa = this.duracaoAsa;
       this.velocidade = this.forcaPulo;
       sons.tocarPulo();
    },
    posicionar: function() {
       var canvas = this.context.canvas;
-      this.x = canvas.width * 0.25;
-      this.y = canvas.height / 2;
+      this.x = larguraTela(canvas) * 0.25;
+      this.y = alturaTela(canvas) / 2;
       this.velocidade = 0;
       this.rotacao = 0;
+      this.tempoAsa = 0;
       this.morto = false;
    },
    retangulosColisao: function() {
-      return [ {x: this.x - this.raio, y: this.y - this.raio, 
-                largura: this.raio * 2, altura: this.raio * 2} ];
+      var m = this.margemColisao;
+      
+      return [ {x: this.x - this.raio + m, y: this.y - this.raio + m, 
+                largura: (this.raio - m) * 2, altura: (this.raio - m) * 2} ];
    },
    colidiuCom: function(outro) {
       if (this.morto) return;

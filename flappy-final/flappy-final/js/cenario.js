@@ -28,7 +28,7 @@ Cenario.prototype = {
       var ctx = this.context;
       var canvas = ctx.canvas;
       var img = TEMAS[indice].imgFundo;
-      var yChao = canvas.height - alturaDoChao(ctx);
+      var yChao = alturaTela(canvas) - alturaDoChao(ctx);
       
       ctx.save();
       ctx.imageSmoothingEnabled = true;
@@ -39,10 +39,10 @@ Cenario.prototype = {
          gradiente.addColorStop(0, '#38bdf8');
          gradiente.addColorStop(1, '#bae6fd');
          ctx.fillStyle = gradiente;
-         ctx.fillRect(0, 0, canvas.width, yChao);
+         ctx.fillRect(0, 0, larguraTela(canvas), yChao);
       }
       else {
-         var proporcao = canvas.width / yChao;
+         var proporcao = larguraTela(canvas) / yChao;
          var base = TEMAS[indice].chaoInicio * img.naturalHeight;
          var origemAltura = base;
          var origemLargura = origemAltura * proporcao;
@@ -58,7 +58,7 @@ Cenario.prototype = {
          var origemX = (img.naturalWidth - origemLargura) / 2;
          
          ctx.drawImage(img, origemX, origemY, origemLargura, 
-                       origemAltura, 0, 0, canvas.width, yChao);
+                       origemAltura, 0, 0, larguraTela(canvas), yChao);
       }
       
       ctx.restore();
